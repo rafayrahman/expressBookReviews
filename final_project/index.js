@@ -9,15 +9,21 @@ const app = express();
 app.use(express.json());
 
 app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}))
-
-app.use("/customer/auth/*", function auth(req,res,next){
-  if(req.session && req.session.username) {
-    next();
-  } else {
-       return res.status(401).json({message: "You Must Logged In to Access This Resource"})
-  }
+app.use("/customer/auth/*", function auth(req, res, next) {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+        return res.status(401).json({ message: "You Must Logged In to Access This Resource" });
+    }
+    try {
+        const decoded = jwt.verify(token, 'fingerprint_customer');
+        req.username = decoded.username;  // store username for use in routes
+        next();
+    } catch (err) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+    }
 });
- 
+
+
 const PORT =5000;
 
 app.use("/customer", customer_routes);
